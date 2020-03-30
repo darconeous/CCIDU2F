@@ -5,6 +5,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "CCIDU2FService.h"
+#import "APDU.h"
 
 static const char kAPDUSelectU2FResponse[] = {
     'U','2','F','_','V','2'
@@ -199,8 +200,17 @@ static const char kU2FAID[] = {
     [card
         inSessionWithError:nil
         executeBlock:^BOOL(NSError *__autoreleasing  _Nullable * _Nullable error) {
+            APDU* apdu = [APDU APDUFromRawData:data];
             UInt16 sw;
+
+            if (![apdu isValid]) {
+                NSLog(@"Invalid APDU");
+                [self sendError:0x6F00 forCid:cid];
+                return NO;
+            }
+
             if (error != nil) {
+                NSLog(@"Error: %@", error);
                 [self sendError:0x6F00 forCid:cid];
                 return NO;
             }
@@ -217,6 +227,7 @@ static const char kU2FAID[] = {
             ];
 
             if (sw != 0x9000) {
+                // Select the legacy applet.
                 [card
                     sendIns:0xa4
                     p1:0x04
@@ -233,21 +244,21 @@ static const char kU2FAID[] = {
                 return NO;
             }
 
-            const uint8_t* bytes = [data bytes];
-
             NSMutableData* result = [[card
-                sendIns:bytes[1]
-                p1:bytes[2]
-                p2:bytes[3]
-                data:[data subdataWithRange:NSMakeRange(7, bytes[6])]
+                sendIns:apdu.ins
+                p1:apdu.p1
+                p2:apdu.p2
+                data:apdu.data
                 le:@0
                 sw:&sw
                 error:nil
             ] mutableCopy];
+
             if (result == nil) {
                 [self sendError:0x6F00 forCid:cid];
                 return NO;
             }
+
             uint8_t byte = (sw>>8);
             [result appendBytes:&byte length:1];
             byte = sw;

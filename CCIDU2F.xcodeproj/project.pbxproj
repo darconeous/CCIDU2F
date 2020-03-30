@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A65D6F0D2432703900A2EACF /* APDU.m in Sources */ = {isa = PBXBuildFile; fileRef = A65D6F0C2432703900A2EACF /* APDU.m */; };
 		A66C7D0D242320F200A99DB8 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A66C7D0C242320F200A99DB8 /* main.m */; };
 		A66C7D38242325D800A99DB8 /* softu2f.c in Sources */ = {isa = PBXBuildFile; fileRef = A66C7D29242323C900A99DB8 /* softu2f.c */; };
 		A66C7D392423261000A99DB8 /* softu2f.h in Headers */ = {isa = PBXBuildFile; fileRef = A66C7D28242323C900A99DB8 /* softu2f.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -32,6 +33,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A65D6F0B2432703900A2EACF /* APDU.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = APDU.h; sourceTree = "<group>"; };
+		A65D6F0C2432703900A2EACF /* APDU.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = APDU.m; sourceTree = "<group>"; };
 		A66C7D09242320F200A99DB8 /* CCIDU2F */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CCIDU2F; sourceTree = BUILT_PRODUCTS_DIR; };
 		A66C7D0C242320F200A99DB8 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		A66C7D27242323C900A99DB8 /* internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = internal.h; sourceTree = "<group>"; };
@@ -95,6 +98,8 @@
 				A66C7D412429904400A99DB8 /* CCIDU2FService.h */,
 				A66C7D46242AB5ED00A99DB8 /* U2FHID.swift */,
 				A66C7D422429904400A99DB8 /* CCIDU2FService.m */,
+				A65D6F0B2432703900A2EACF /* APDU.h */,
+				A65D6F0C2432703900A2EACF /* APDU.m */,
 				A66C7D45242AB5EC00A99DB8 /* CCIDU2F-Bridging-Header.h */,
 			);
 			path = CCIDU2F;
@@ -217,6 +222,7 @@
 				A66C7D0D242320F200A99DB8 /* main.m in Sources */,
 				A66C7D432429904400A99DB8 /* CCIDU2FService.m in Sources */,
 				A66C7D47242AB5ED00A99DB8 /* U2FHID.swift in Sources */,
+				A65D6F0D2432703900A2EACF /* APDU.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
