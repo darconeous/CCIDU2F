@@ -193,6 +193,47 @@ static const char kU2FAID[] = {
     }
 }
 
+#define FLAG_FINAL_RED_SET      ((1<<0)|(1<<2))
+#define FLAG_FINAL_RED_CLEAR    (1<<2)
+#define FLAG_FINAL_GREEN_SET    ((1<<1)|(1<<3))
+#define FLAG_FINAL_GREEN_CLEAR  (1<<3)
+#define FLAG_BLINK_RED_INIT_SET      ((1<<4)|(1<<6))
+#define FLAG_BLINK_RED_INIT_CLEAR    (1<<6)
+#define FLAG_BLINK_GREEN_INIT_SET      ((1<<5)|(1<<7))
+#define FLAG_BLINK_GREEN_INIT_CLEAR    (1<<7)
+
+-(void)acr122ReaderFeedback:(TKSmartCard*)card flags:(uint8_t)flags t1dur:(uint8_t)t1dur t2dur:(uint8_t)t2dur count:(uint8_t)count buzzer:(uint8_t)buzz
+{
+    uint16_t ignore;
+    uint8_t blink[4] = { t1dur, t2dur, count, buzz};
+    uint8_t cla = card.cla;
+    card.cla = 0xFF;
+    [card
+        sendIns:0x00
+        p1:0x40
+        p2:flags
+        data:[NSData dataWithBytes:blink length:sizeof(blink)]
+        le:@0
+        sw:&ignore
+        error:nil
+    ];
+    card.cla = cla;
+}
+
+-(void)winkCard:(TKSmartCard*)card {
+    if ([card.slot.name containsString:@"ACR122U"]) {
+        // The ACR122U supports the ability to blink the LED.
+        [self
+            acr122ReaderFeedback:card
+            flags:FLAG_BLINK_GREEN_INIT_SET|FLAG_BLINK_RED_INIT_CLEAR
+            t1dur:1
+            t2dur:1
+            count:4
+            buzzer:0
+        ];
+    }
+}
+
 - (void)handleMsg:(NSData*)data withCid:(uint32_t)cid {
     NSLog(@"Got U2FHID MSG %@, CID: %u", data, cid);
     TKSmartCard* card = self.cards.anyObject;
@@ -200,8 +241,15 @@ static const char kU2FAID[] = {
     [card
         inSessionWithError:nil
         executeBlock:^BOOL(NSError *__autoreleasing  _Nullable * _Nullable error) {
-            APDU* apdu = [APDU APDUFromRawData:data];
             UInt16 sw;
+
+            if (error != nil) {
+                NSLog(@"Error: %@", *error);
+                [self sendError:0x6F00 forCid:cid];
+                return NO;
+            }
+
+            APDU* apdu = [APDU APDUFromRawData:data];
 
             if (![apdu isValid]) {
                 NSLog(@"Invalid APDU");
@@ -209,9 +257,21 @@ static const char kU2FAID[] = {
                 return NO;
             }
 
-            if (error != nil) {
-                NSLog(@"Error: %@", error);
-                [self sendError:0x6F00 forCid:cid];
+            // Class sanity check, U2F is always CLA 0x00
+            if (apdu.cla != 0x00) {
+                NSLog(@"Invalid CLA 0x%02X", apdu.cla);
+                [self sendError:0x6E00 forCid:cid];
+                return NO;
+            }
+
+            card.cla = 0x00;
+
+            uint8_t ins = apdu.ins;
+
+            // Instruction sanity check
+            if (!((ins>=1 && ins<=0x3) || (ins>=0x40 && ins<=0xbf))) {
+                NSLog(@"Invalid INS 0x%02X", ins);
+                [self sendError:0x6D00 forCid:cid];
                 return NO;
             }
 
@@ -265,7 +325,19 @@ static const char kU2FAID[] = {
             [result appendBytes:&byte length:1];
 
             NSLog(@"Sending U2FHID Response %@, CID: %u, %04X", result, cid, sw);
-            return [self.hid sendMsgWithCid:cid data:result];
+            (void)[self.hid sendMsgWithCid:cid data:result];
+
+            switch ((apdu.claIns<<16)+sw) {
+            case 0x00016985:
+            case 0x00026985:
+                [self winkCard:card];
+                return NO;
+                break;
+            default:
+                break;
+            }
+
+            return YES;
         }
     ];
 }
@@ -274,11 +346,9 @@ static const char kU2FAID[] = {
     NSLog(@"Enabling Fake U2F HID Device");
     if (self.hid == nil) {
         self.hid = [[U2FHID alloc] init];
-        //dispatch_queue_main_t dispatch_get_main_queue(void);
 
         [self.hid handle:MessageTypeMsg with:^BOOL(softu2f_hid_message hid_msg) {
             NSData* data = (__bridge NSData *)(hid_msg.data);
-            // TODO: verify data
 
             dispatch_async(
                 dispatch_get_main_queue(),
