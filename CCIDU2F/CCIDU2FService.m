@@ -39,6 +39,8 @@ static const char kU2FAID[] = {
         options:NSKeyValueObservingOptionInitial
         context:NULL
     ];
+    NSLog(@"Waiting for smart cards...");
+
 }
 
 - (void)stop {
@@ -54,6 +56,7 @@ static const char kU2FAID[] = {
         for (NSString* name in self.slotManager.slotNames) {
             if ([name containsString:@"Yubico"]) {
                 // Ignore yubikeys, they already do U2F.
+                NSLog(@"Ignoring Yubico devices, they already support U2F.");
                 continue;
             }
 
@@ -151,27 +154,34 @@ static const char kU2FAID[] = {
             ];
 
             if (sw != 0x9000) {
+                UInt16 sw2;
                 response = [card
                     sendIns:0xa4
                     p1:0x04
                     p2:0x00
                     data:[NSData dataWithBytes:kU2FLegacyAID length:sizeof(kU2FLegacyAID)]
                     le:@0
-                    sw:&sw
+                    sw:&sw2
                     error:nil
                 ];
-                if (sw == 0x9000) {
+                if (sw2 == 0x9000) {
                     NSLog(@"Legacy U2F AID detected: %@", response);
                 }
-                return sw == 0x9000;
+                return sw2 == 0x9000;
             }
 
-            return [response
+            BOOL has_u2f = [response
                 isEqual:[NSData
                     dataWithBytes:kAPDUSelectU2FResponse
                     length:sizeof(kAPDUSelectU2FResponse)
                 ]
             ];
+
+            if (!has_u2f) {
+                NSLog(@"Card is not U2F compatible. SW = 0x%04X; DATA = %@", sw, response);
+            }
+
+            return has_u2f;
         }
     ];
 
